@@ -23,35 +23,35 @@ createDefaultAdmin();
 // ===========================
 // 3. Middleware
 // ===========================
-app.use(cors()); // Allow all origins (for testing – you can restrict later)
-app.use(express.json()); // Parse JSON bodies
+app.use(cors());
+app.use(express.json());
 
 // ===========================
-// 4. Routes – all API endpoints
+// 4. Routes – ALL endpoints
 // ===========================
-app.use('/api/auth', require('./routes/authRoutes'));                 // Register / Login / GetMe
-app.use('/api/products', require('./routes/productRoutes'));           // Product listing & management
-app.use('/api/investments', require('./routes/investmentRoutes'));     // Purchase & investment history
-app.use('/api/team', require('./routes/teamRoutes'));                 // Team data & referral stats
-app.use('/api/withdrawals', require('./routes/withdrawalRoutes'));     // Withdrawal requests & history
-app.use('/api/checkin', require('./routes/checkinRoutes'));           // Daily check‑in
-app.use('/api/tasks', require('./routes/taskRoutes'));                // Task center
-app.use('/api/gift', require('./routes/giftRoutes'));                 // Gift code redemption
-app.use('/api/transactions', require('./routes/transactionRoutes'));   // Transaction history
-app.use('/api/managers', require('./routes/adminRoutes'));            // Admin panel (login, users, etc.)
-app.use('/api/reports', require('./routes/reportRoutes'));            // Reports (daily/weekly/monthly)
-app.use('/api/recharges', require('./routes/rechargeRoutes'));         // Recharge requests
-app.use('/api/settings', require('./routes/settingsRoutes'));         // Public settings (bank details)
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/products', require('./routes/productRoutes'));
+app.use('/api/investments', require('./routes/investmentRoutes'));
+app.use('/api/team', require('./routes/teamRoutes'));
+app.use('/api/withdrawals', require('./routes/withdrawalRoutes'));
+app.use('/api/checkin', require('./routes/checkinRoutes'));
+app.use('/api/tasks', require('./routes/taskRoutes'));
+app.use('/api/gift', require('./routes/giftRoutes'));
+app.use('/api/transactions', require('./routes/transactionRoutes'));
+app.use('/api/managers', require('./routes/adminRoutes'));  // <-- IMPORTANT
+app.use('/api/reports', require('./routes/reportRoutes'));
+app.use('/api/recharges', require('./routes/rechargeRoutes'));
+app.use('/api/settings', require('./routes/settingsRoutes'));
 
 // ===========================
-// 5. Root route – health check
+// 5. Health check
 // ===========================
 app.get('/', (req, res) => {
-  res.json({ msg: '🚀 Auto Parts Backend is running!' });
+  res.json({ msg: 'Auto Parts Backend is running!' });
 });
 
 // ===========================
-// 6. Cron job: daily income (midnight UTC)
+// 6. Daily income cron job
 // ===========================
 cron.schedule('0 0 * * *', async () => {
   console.log('[CRON] Running daily income job...');
@@ -64,7 +64,7 @@ cron.schedule('0 0 * * *', async () => {
 });
 
 // ===========================
-// 7. Manual income trigger (for testing)
+// 7. Manual income trigger (testing)
 // ===========================
 app.get('/api/force-income', async (req, res) => {
   try {
