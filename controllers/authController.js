@@ -2,8 +2,14 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// Generate a random 5‑character alphanumeric code (e.g., "A7B3C")
 function generateReferralCode() {
-  return 'AP' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 5).toUpperCase();
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 5; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
 }
 
 exports.register = async (req, res) => {
@@ -22,14 +28,22 @@ exports.register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Generate a unique referral code (retry if collision)
+    let myReferralCode;
+    let exists = true;
+    while (exists) {
+      myReferralCode = generateReferralCode();
+      const existing = await User.findOne({ myReferralCode });
+      if (!existing) exists = false;
+    }
+
     const newUser = new User({
       accountNumber,
       password: hashedPassword,
       invitationCode: invitationCode || '',
-      myReferralCode: generateReferralCode(),
-      balance: 0,
-      bonusBalance: 3000, // registration bonus (non-withdrawable until first purchase)
-      cumulativeIncome: 0,
+      myReferralCode,
+      balance: 3000, // registration bonus
+      cumulativeIncome: 3000,
       level: 1,
       checkinDays: 0,
       referredBy: null
@@ -44,6 +58,16 @@ exports.register = async (req, res) => {
 
     await newUser.save();
 
+    // Record registration bonus transaction
+    const Transaction = require('../models/Transaction');
+    await new Transaction({
+      userId: newUser._id,
+      type: 'adjustment',
+      amount: 3000,
+      description: 'Registration bonus',
+      status: 'success'
+    }).save();
+
     const payload = { user: { id: newUser.id } };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 
@@ -53,7 +77,6 @@ exports.register = async (req, res) => {
         id: newUser.id,
         accountNumber: newUser.accountNumber,
         balance: newUser.balance,
-        bonusBalance: newUser.bonusBalance,
         cumulativeIncome: newUser.cumulativeIncome,
         myReferralCode: newUser.myReferralCode,
         level: newUser.level,
@@ -93,7 +116,6 @@ exports.login = async (req, res) => {
         id: user.id,
         accountNumber: user.accountNumber,
         balance: user.balance,
-        bonusBalance: user.bonusBalance,
         cumulativeIncome: user.cumulativeIncome,
         myReferralCode: user.myReferralCode,
         level: user.level,

@@ -32,13 +32,19 @@ router.post('/recharges/:id/reject', adminAuth, adminController.rejectRecharge);
 router.post('/products', adminAuth, adminController.createProduct);
 router.delete('/products/:id', adminAuth, adminController.deleteProduct);
 
-// Gift Codes
+// ============================================================
+// Gift Codes – ORDER MATTERS: "/all" must come BEFORE "/:id"
+// ============================================================
 router.get('/giftcodes', adminAuth, adminController.getGiftCodes);
 router.post('/giftcodes', adminAuth, adminController.createGiftCode);
+router.delete('/giftcodes/all', adminAuth, adminController.deleteAllGiftCodes);
 router.delete('/giftcodes/:id', adminAuth, adminController.deleteGiftCode);
 
 // Settings
 router.get('/settings', adminAuth, adminController.getSettings);
 router.put('/settings', adminAuth, adminController.updateSettings);
+
+// Admin password change
+router.post('/change-password', adminAuth, adminController.changePassword);
 
 module.exports = router;

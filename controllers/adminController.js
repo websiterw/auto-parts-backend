@@ -30,6 +30,32 @@ exports.login = async (req, res) => {
   }
 };
 
+// ========== CHANGE ADMIN PASSWORD ==========
+exports.changePassword = async (req, res) => {
+  try {
+    const adminId = req.admin.id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ msg: 'Please provide current and new password' });
+    }
+
+    const admin = await Admin.findById(adminId);
+    if (!admin) return res.status(404).json({ msg: 'Admin not found' });
+
+    const isMatch = await bcrypt.compare(currentPassword, admin.password);
+    if (!isMatch) return res.status(400).json({ msg: 'Current password is incorrect' });
+
+    const salt = await bcrypt.genSalt(10);
+    admin.password = await bcrypt.hash(newPassword, salt);
+    await admin.save();
+
+    res.json({ msg: 'Password updated successfully' });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+};
+
 // ========== DASHBOARD ==========
 exports.dashboard = async (req, res) => {
   try {
@@ -163,19 +189,28 @@ exports.approveWithdrawal = async (req, res) => {
 exports.rejectWithdrawal = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log(`[rejectWithdrawal] Rejecting withdrawal ID: ${id}`);
+
     const withdrawal = await PendingWithdrawal.findById(id);
-    if (!withdrawal) return res.status(404).json({ msg: 'Not found' });
+    if (!withdrawal) {
+      console.error('[rejectWithdrawal] Withdrawal not found');
+      return res.status(404).json({ msg: 'Withdrawal not found' });
+    }
+
+    const user = await User.findById(withdrawal.userId);
+    if (!user) {
+      console.error(`[rejectWithdrawal] User not found for userId: ${withdrawal.userId}`);
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // Refund the user
+    user.balance += withdrawal.amount;
+    await user.save();
+    console.log(`[rejectWithdrawal] User ${user.accountNumber} refunded to balance ${user.balance}`);
 
     withdrawal.status = 'rejected';
     withdrawal.processedAt = new Date();
     await withdrawal.save();
-
-    // Refund user
-    const user = await User.findById(withdrawal.userId);
-    if (user) {
-      user.balance += withdrawal.amount;
-      await user.save();
-    }
 
     await new Transaction({
       userId: withdrawal.userId,
@@ -186,9 +221,10 @@ exports.rejectWithdrawal = async (req, res) => {
       status: 'failed'
     }).save();
 
-    res.json({ msg: 'Withdrawal rejected and refunded' });
+    res.json({ msg: 'Withdrawal rejected and refunded', newBalance: user.balance });
   } catch (err) {
-    res.status(500).json({ msg: err.message });
+    console.error('[rejectWithdrawal] Error:', err);
+    res.status(500).json({ msg: 'Server error: ' + err.message });
   }
 };
 
@@ -205,19 +241,29 @@ exports.getPendingRecharges = async (req, res) => {
 exports.approveRecharge = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log(`[approveRecharge] Approving recharge ID: ${id}`);
+
     const recharge = await PendingRecharge.findById(id);
-    if (!recharge) return res.status(404).json({ msg: 'Not found' });
+    if (!recharge) {
+      console.error('[approveRecharge] Recharge not found');
+      return res.status(404).json({ msg: 'Recharge not found' });
+    }
+
+    const user = await User.findById(recharge.userId);
+    if (!user) {
+      console.error(`[approveRecharge] User not found for userId: ${recharge.userId}`);
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // Update user balance
+    user.balance += recharge.amount;
+    user.cumulativeIncome += recharge.amount;
+    await user.save();
+    console.log(`[approveRecharge] User ${user.accountNumber} balance updated to ${user.balance}`);
 
     recharge.status = 'approved';
     recharge.processedAt = new Date();
     await recharge.save();
-
-    const user = await User.findById(recharge.userId);
-    if (user) {
-      user.balance += recharge.amount;
-      user.cumulativeIncome += recharge.amount;
-      await user.save();
-    }
 
     await new Transaction({
       userId: recharge.userId,
@@ -228,9 +274,10 @@ exports.approveRecharge = async (req, res) => {
       status: 'success'
     }).save();
 
-    res.json({ msg: 'Recharge approved' });
+    res.json({ msg: 'Recharge approved', newBalance: user.balance });
   } catch (err) {
-    res.status(500).json({ msg: err.message });
+    console.error('[approveRecharge] Error:', err);
+    res.status(500).json({ msg: 'Server error: ' + err.message });
   }
 };
 
@@ -283,10 +330,22 @@ exports.getGiftCodes = async (req, res) => {
 
 exports.createGiftCode = async (req, res) => {
   try {
-    const { code, amount } = req.body;
+    const { code, minAmount, maxAmount } = req.body;
+
+    if (!code || minAmount === undefined || maxAmount === undefined) {
+      return res.status(400).json({ msg: 'Code, minAmount and maxAmount are required.' });
+    }
+    if (minAmount > maxAmount) {
+      return res.status(400).json({ msg: 'Min amount cannot be greater than max amount.' });
+    }
+    if (minAmount < 0 || maxAmount < 0) {
+      return res.status(400).json({ msg: 'Amounts must be positive.' });
+    }
+
     const existing = await GiftCode.findOne({ code });
     if (existing) return res.status(400).json({ msg: 'Code already exists' });
-    const gift = new GiftCode({ code, amount });
+
+    const gift = new GiftCode({ code, minAmount, maxAmount, isActive: true });
     await gift.save();
     res.json(gift);
   } catch (err) {
@@ -300,6 +359,16 @@ exports.deleteGiftCode = async (req, res) => {
     await GiftCode.findByIdAndDelete(id);
     res.json({ msg: 'Gift code deleted' });
   } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+};
+
+exports.deleteAllGiftCodes = async (req, res) => {
+  try {
+    const result = await GiftCode.deleteMany({});
+    res.json({ msg: `Deleted ${result.deletedCount} gift codes.` });
+  } catch (err) {
+    console.error('Delete all gift codes error:', err);
     res.status(500).json({ msg: err.message });
   }
 };
@@ -318,26 +387,20 @@ exports.updateSettings = async (req, res) => {
   try {
     const settings = await Settings.getSettings();
     const {
-      telegramLink,
-      telegramGroup,
-      telegramChannel,
-      minWithdrawal,
-      withdrawalFee,
       mtnAccount,
       mtnName,
       airtelAccount,
-      airtelName
+      airtelName,
+      minWithdrawal,
+      withdrawalFee
     } = req.body;
 
-    if (telegramLink !== undefined) settings.telegramLink = telegramLink;
-    if (telegramGroup !== undefined) settings.telegramGroup = telegramGroup;
-    if (telegramChannel !== undefined) settings.telegramChannel = telegramChannel;
-    if (minWithdrawal !== undefined) settings.minWithdrawal = minWithdrawal;
-    if (withdrawalFee !== undefined) settings.withdrawalFee = withdrawalFee;
     if (mtnAccount !== undefined) settings.mtnAccount = mtnAccount;
     if (mtnName !== undefined) settings.mtnName = mtnName;
     if (airtelAccount !== undefined) settings.airtelAccount = airtelAccount;
     if (airtelName !== undefined) settings.airtelName = airtelName;
+    if (minWithdrawal !== undefined) settings.minWithdrawal = minWithdrawal;
+    if (withdrawalFee !== undefined) settings.withdrawalFee = withdrawalFee;
 
     settings.updatedAt = new Date();
     await settings.save();

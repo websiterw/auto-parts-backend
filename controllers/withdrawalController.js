@@ -3,7 +3,7 @@ const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 
 // ============================================
-// User submits a withdrawal request (pending approval)
+// SUBMIT WITHDRAWAL REQUEST (PENDING)
 // ============================================
 exports.requestWithdrawal = async (req, res) => {
   try {
@@ -45,7 +45,8 @@ exports.requestWithdrawal = async (req, res) => {
       type: 'withdrawal',
       amount: -amount,
       description: `Withdrawal request pending #${pending._id}`,
-      reference: pending._id
+      reference: pending._id,
+      status: 'pending'
     }).save();
 
     res.json({
@@ -60,12 +61,12 @@ exports.requestWithdrawal = async (req, res) => {
 };
 
 // ============================================
-// Get all withdrawal requests for the logged-in user
+// GET WITHDRAWAL RECORDS FOR THE USER
 // ============================================
 exports.getUserWithdrawals = async (req, res) => {
   try {
     const userId = req.user.id;
-    // Get both pending and approved/rejected records
+    // Get both pending and processed withdrawals
     const withdrawals = await PendingWithdrawal.find({ userId }).sort({ createdAt: -1 });
     res.json(withdrawals);
   } catch (err) {

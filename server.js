@@ -10,14 +10,14 @@ const investmentController = require('./controllers/investmentController');
 
 const app = express();
 
-// Connect to MongoDB
+// Connect to MongoDB Atlas (cloud)
 connectDB();
 
-// Create default admin (username: admin, password: admin123)
+// Create default admin (only if it doesn't exist)
 createDefaultAdmin();
 
 // Middleware
-app.use(cors());
+app.use(cors()); // Allows all origins (for testing)
 app.use(express.json());
 
 // ------------------- ROUTES ------------------- //
@@ -31,10 +31,16 @@ app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/gift', require('./routes/giftRoutes'));
 app.use('/api/transactions', require('./routes/transactionRoutes'));
 app.use('/api/managers', require('./routes/adminRoutes'));   // Admin panel
-app.use('/api/reports', require('./routes/reportRoutes'));    // Reports
-app.use('/api/recharges', require('./routes/rechargeRoutes')); // Recharge requests
+app.use('/api/reports', require('./routes/reportRoutes'));
+app.use('/api/recharges', require('./routes/rechargeRoutes'));
+app.use('/api/settings', require('./routes/settingsRoutes'));
 
-// ------------------- CRON JOB: Daily Income ------------------- //
+// Root route – just a health check
+app.get('/', (req, res) => {
+  res.json({ msg: 'Auto Parts Backend is running!' });
+});
+
+// Cron job for daily income (runs at midnight UTC)
 cron.schedule('0 0 * * *', async () => {
   console.log('[CRON] Running daily income job...');
   try {
@@ -45,7 +51,7 @@ cron.schedule('0 0 * * *', async () => {
   }
 });
 
-// Temporary test endpoint (manual trigger)
+// Manual test endpoint (optional)
 app.get('/api/force-income', async (req, res) => {
   try {
     await investmentController.processDailyIncome();
@@ -55,10 +61,10 @@ app.get('/api/force-income', async (req, res) => {
   }
 });
 
-// ------------------- ERROR HANDLING ------------------- //
+// Error handling
 app.use(errorHandler);
 
-// ------------------- START SERVER ------------------- //
+// Start server – use port from environment (Render sets it)
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
