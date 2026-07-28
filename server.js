@@ -51,37 +51,50 @@ app.get('/', (req, res) => {
 });
 
 // ===========================
-// 6. Daily income cron job
+// 6. NEW endpoint: process due incomes (called by external cron)
 // ===========================
-cron.schedule('0 0 * * *', async () => {
-  console.log('[CRON] Running daily income job...');
+app.get('/api/process-incomes', async (req, res) => {
   try {
-    await investmentController.processDailyIncome();
-    console.log('[CRON] Daily income processed successfully.');
+    const count = await investmentController.processDueIncomes();
+    res.json({ msg: `Processed ${count} income payments.` });
   } catch (err) {
-    console.error('[CRON] Error processing daily income:', err);
+    console.error('[process-incomes] Error:', err);
+    res.status(500).json({ msg: err.message });
   }
 });
 
 // ===========================
-// 7. Manual income trigger (testing)
+// 7. Legacy midnight cron (optional, but harmless)
+// ===========================
+cron.schedule('0 0 * * *', async () => {
+  console.log('[CRON] Running daily income job (legacy)...');
+  try {
+    await investmentController.processDailyIncome();
+    console.log('[CRON] Legacy daily income processed.');
+  } catch (err) {
+    console.error('[CRON] Error:', err);
+  }
+});
+
+// ===========================
+// 8. Manual trigger (for testing)
 // ===========================
 app.get('/api/force-income', async (req, res) => {
   try {
-    await investmentController.processDailyIncome();
-    res.json({ msg: 'Income processed manually.' });
+    await investmentController.processDueIncomes(); // use new function
+    res.json({ msg: 'Income processed manually (due incomes).' });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
 });
 
 // ===========================
-// 8. Global error handler
+// 9. Global error handler
 // ===========================
 app.use(errorHandler);
 
 // ===========================
-// 9. Start server
+// 10. Start server
 // ===========================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
