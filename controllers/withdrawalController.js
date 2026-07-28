@@ -1,6 +1,7 @@
 const PendingWithdrawal = require('../models/PendingWithdrawal');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
+const Investment = require('../models/Investment'); // <-- NEW: required to check active product
 
 // ============================================
 // SUBMIT WITHDRAWAL REQUEST (PENDING)
@@ -10,25 +11,33 @@ exports.requestWithdrawal = async (req, res) => {
     const { amount, fee, netAmount, bankDetails } = req.body;
     const userId = req.user.id;
 
-    // Validate amount
+    // 1. Validate amount
     if (!amount || amount < 3000) {
       return res.status(400).json({ msg: 'Minimum withdrawal amount is RWF 3,000' });
     }
 
-    // Check user balance
+    // 2. Check user exists
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ msg: 'User not found' });
     }
+
+    // 3. Check sufficient balance
     if (user.balance < amount) {
       return res.status(400).json({ msg: 'Insufficient balance' });
     }
 
-    // Deduct balance immediately (will be refunded if rejected)
+    // 4. NEW: Check if the user has an ACTIVE investment (product)
+    const activeInvestment = await Investment.findOne({ userId, isActive: true });
+    if (!activeInvestment) {
+      return res.status(400).json({ msg: 'You must have an active product to withdraw.' });
+    }
+
+    // 5. Deduct balance immediately (refunded if rejected)
     user.balance -= amount;
     await user.save();
 
-    // Create pending withdrawal record
+    // 6. Create pending withdrawal record
     const pending = new PendingWithdrawal({
       userId,
       amount,
@@ -39,7 +48,7 @@ exports.requestWithdrawal = async (req, res) => {
     });
     await pending.save();
 
-    // Record the transaction (optional)
+    // 7. Record the transaction
     await new Transaction({
       userId,
       type: 'withdrawal',
@@ -66,7 +75,6 @@ exports.requestWithdrawal = async (req, res) => {
 exports.getUserWithdrawals = async (req, res) => {
   try {
     const userId = req.user.id;
-    // Get both pending and processed withdrawals
     const withdrawals = await PendingWithdrawal.find({ userId }).sort({ createdAt: -1 });
     res.json(withdrawals);
   } catch (err) {
