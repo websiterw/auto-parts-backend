@@ -151,7 +151,6 @@ exports.updateTransaction = async (req, res) => {
   }
 };
 
-// ---- NEW DELETE TRANSACTIONS ----
 exports.deleteTransaction = async (req, res) => {
   try {
     const { id } = req.params;
@@ -223,7 +222,6 @@ exports.rejectWithdrawal = async (req, res) => {
       return res.status(404).json({ msg: 'User not found' });
     }
 
-    // Refund the user
     user.balance += withdrawal.amount;
     await user.save();
     console.log(`[rejectWithdrawal] User ${user.accountNumber} refunded to balance ${user.balance}`);
@@ -248,7 +246,6 @@ exports.rejectWithdrawal = async (req, res) => {
   }
 };
 
-// ---- NEW DELETE WITHDRAWALS ----
 exports.deleteWithdrawal = async (req, res) => {
   try {
     const { id } = req.params;
@@ -295,7 +292,6 @@ exports.approveRecharge = async (req, res) => {
       return res.status(404).json({ msg: 'User not found' });
     }
 
-    // Update user balance
     user.balance += recharge.amount;
     user.cumulativeIncome += recharge.amount;
     await user.save();
@@ -337,7 +333,6 @@ exports.rejectRecharge = async (req, res) => {
   }
 };
 
-// ---- NEW DELETE RECHARGES ----
 exports.deleteRecharge = async (req, res) => {
   try {
     const { id } = req.params;
@@ -439,6 +434,7 @@ exports.getSettings = async (req, res) => {
     const settings = await Settings.getSettings();
     res.json(settings);
   } catch (err) {
+    console.error('getSettings error:', err);
     res.status(500).json({ msg: err.message });
   }
 };
@@ -466,6 +462,7 @@ exports.updateSettings = async (req, res) => {
     await settings.save();
     res.json(settings);
   } catch (err) {
+    console.error('updateSettings error:', err);
     res.status(500).json({ msg: err.message });
   }
 };
