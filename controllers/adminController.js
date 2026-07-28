@@ -151,6 +151,26 @@ exports.updateTransaction = async (req, res) => {
   }
 };
 
+// ---- NEW DELETE TRANSACTIONS ----
+exports.deleteTransaction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await Transaction.findByIdAndDelete(id);
+    res.json({ msg: 'Transaction deleted.' });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+};
+
+exports.deleteAllTransactions = async (req, res) => {
+  try {
+    const result = await Transaction.deleteMany({});
+    res.json({ msg: `Deleted ${result.deletedCount} transactions.` });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+};
+
 // ========== PENDING WITHDRAWALS ==========
 exports.getPendingWithdrawals = async (req, res) => {
   try {
@@ -228,6 +248,26 @@ exports.rejectWithdrawal = async (req, res) => {
   }
 };
 
+// ---- NEW DELETE WITHDRAWALS ----
+exports.deleteWithdrawal = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await PendingWithdrawal.findByIdAndDelete(id);
+    res.json({ msg: 'Withdrawal record deleted.' });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+};
+
+exports.deleteAllWithdrawals = async (req, res) => {
+  try {
+    const result = await PendingWithdrawal.deleteMany({});
+    res.json({ msg: `Deleted ${result.deletedCount} withdrawal records.` });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+};
+
 // ========== PENDING RECHARGES ==========
 exports.getPendingRecharges = async (req, res) => {
   try {
@@ -292,6 +332,26 @@ exports.rejectRecharge = async (req, res) => {
     await recharge.save();
 
     res.json({ msg: 'Recharge rejected' });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+};
+
+// ---- NEW DELETE RECHARGES ----
+exports.deleteRecharge = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await PendingRecharge.findByIdAndDelete(id);
+    res.json({ msg: 'Recharge record deleted.' });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+};
+
+exports.deleteAllRecharges = async (req, res) => {
+  try {
+    const result = await PendingRecharge.deleteMany({});
+    res.json({ msg: `Deleted ${result.deletedCount} recharge records.` });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
