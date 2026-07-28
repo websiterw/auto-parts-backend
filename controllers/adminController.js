@@ -466,7 +466,6 @@ exports.updateSettings = async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 };
-
 // ========== CREATE DEFAULT ADMIN ==========
 exports.createDefaultAdmin = async () => {
   try {
