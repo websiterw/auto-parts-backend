@@ -9,9 +9,11 @@ const InvestmentSchema = new mongoose.Schema({
   totalIncome: Number,
   termDays: Number,
   purchasedAt: { type: Date, default: Date.now },
-  daysRemaining: { type: Number, default: 0 },      // will be updated daily
-  totalReceived: { type: Number, default: 0 },      // accumulated income received
-  isActive: { type: Boolean, default: true }
+  daysRemaining: { type: Number, default: 0 },
+  totalReceived: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true },
+  // NEW: tracks the last time income was added
+  lastIncomeDate: { type: Date, default: Date.now }
 });
 
 module.exports = mongoose.model('Investment', InvestmentSchema);
