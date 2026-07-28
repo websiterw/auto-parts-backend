@@ -2,7 +2,6 @@ const User = require('../models/User');
 const Commission = require('../models/Commission');
 const Transaction = require('../models/Transaction');
 
-// Commission levels: L1 = 35%, L2 = 2%, L3 = 1%
 const COMMISSION_LEVELS = {
   1: 0.35,
   2: 0.02,
@@ -11,14 +10,21 @@ const COMMISSION_LEVELS = {
 
 exports.calculateCommissions = async (userId, investAmount, investmentId) => {
   try {
-    let currentUser = await User.findById(userId);
+    const currentUser = await User.findById(userId);
+    if (!currentUser || !currentUser.referredBy) return;
+
+    // Check if this referred user already has any commission
+    const existingCommission = await Commission.findOne({ referredUserId: userId });
+    if (existingCommission) {
+      // Already paid commission for this user's first deposit, skip
+      return;
+    }
+
     let level = 1;
     let referrerId = currentUser.referredBy;
+    let referrer = await User.findById(referrerId);
 
-    while (referrerId && level <= 3) {
-      const referrer = await User.findById(referrerId);
-      if (!referrer) break;
-
+    while (referrer && level <= 3) {
       const percentage = COMMISSION_LEVELS[level];
       const commissionAmount = investAmount * percentage;
 
@@ -46,8 +52,9 @@ exports.calculateCommissions = async (userId, investAmount, investmentId) => {
         }).save();
       }
 
-      currentUser = referrer;
-      referrerId = currentUser.referredBy;
+      // Move up the chain: the referrer becomes the next user to check their referrer
+      const nextReferrerId = referrer.referredBy;
+      referrer = nextReferrerId ? await User.findById(nextReferrerId) : null;
       level++;
     }
   } catch (err) {
