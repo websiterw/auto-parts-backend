@@ -14,45 +14,37 @@ router.get('/users', adminAuth, adminController.getUsers);
 router.put('/users/:id', adminAuth, adminController.updateUser);
 router.delete('/users/:id', adminAuth, adminController.deleteUser);
 
-// ============================================================
-// TRANSACTIONS – "/all" must come BEFORE "/:id"
-// ============================================================
+// Transactions
 router.get('/transactions', adminAuth, adminController.getTransactions);
 router.put('/transactions/:id', adminAuth, adminController.updateTransaction);
-router.delete('/transactions/all', adminAuth, adminController.deleteAllTransactions);   // <-- FIRST
-router.delete('/transactions/:id', adminAuth, adminController.deleteTransaction);        // <-- SECOND
+router.delete('/transactions/all', adminAuth, adminController.deleteAllTransactions);
+router.delete('/transactions/:id', adminAuth, adminController.deleteTransaction);
 
-// ============================================================
-// WITHDRAWALS – "/all" must come BEFORE "/:id"
-// ============================================================
+// Withdrawals
 router.get('/withdrawals/pending', adminAuth, adminController.getPendingWithdrawals);
 router.post('/withdrawals/:id/approve', adminAuth, adminController.approveWithdrawal);
 router.post('/withdrawals/:id/reject', adminAuth, adminController.rejectWithdrawal);
-router.delete('/withdrawals/all', adminAuth, adminController.deleteAllWithdrawals);      // <-- FIRST
-router.delete('/withdrawals/:id', adminAuth, adminController.deleteWithdrawal);          // <-- SECOND
+router.delete('/withdrawals/all', adminAuth, adminController.deleteAllWithdrawals);
+router.delete('/withdrawals/:id', adminAuth, adminController.deleteWithdrawal);
 
-// ============================================================
-// RECHARGES – "/all" must come BEFORE "/:id"
-// ============================================================
+// Recharges
 router.get('/recharges/pending', adminAuth, adminController.getPendingRecharges);
 router.post('/recharges/:id/approve', adminAuth, adminController.approveRecharge);
 router.post('/recharges/:id/reject', adminAuth, adminController.rejectRecharge);
-router.delete('/recharges/all', adminAuth, adminController.deleteAllRecharges);          // <-- FIRST
-router.delete('/recharges/:id', adminAuth, adminController.deleteRecharge);              // <-- SECOND
+router.delete('/recharges/all', adminAuth, adminController.deleteAllRecharges);
+router.delete('/recharges/:id', adminAuth, adminController.deleteRecharge);
 
 // Products
 router.post('/products', adminAuth, adminController.createProduct);
 router.delete('/products/:id', adminAuth, adminController.deleteProduct);
 
-// ============================================================
-// GIFT CODES – "/all" must come BEFORE "/:id"
-// ============================================================
+// Gift Codes
 router.get('/giftcodes', adminAuth, adminController.getGiftCodes);
 router.post('/giftcodes', adminAuth, adminController.createGiftCode);
-router.delete('/giftcodes/all', adminAuth, adminController.deleteAllGiftCodes);           // <-- FIRST
-router.delete('/giftcodes/:id', adminAuth, adminController.deleteGiftCode);               // <-- SECOND
+router.delete('/giftcodes/all', adminAuth, adminController.deleteAllGiftCodes);
+router.delete('/giftcodes/:id', adminAuth, adminController.deleteGiftCode);
 
-// Settings
+// ===== SETTINGS ROUTES =====
 router.get('/settings', adminAuth, adminController.getSettings);
 router.put('/settings', adminAuth, adminController.updateSettings);
 
