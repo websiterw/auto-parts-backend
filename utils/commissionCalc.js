@@ -1,11 +1,12 @@
 const User = require('../models/User');
 const Commission = require('../models/Commission');
 const Transaction = require('../models/Transaction');
+const Investment = require('../models/Investment');
 
 const COMMISSION_LEVELS = {
-  1: 0.35,
-  2: 0.02,
-  3: 0.01
+  1: 0.35, // 35%
+  2: 0.02, // 2%
+  3: 0.01  // 1%
 };
 
 exports.calculateCommissions = async (userId, investAmount, investmentId) => {
@@ -13,18 +14,28 @@ exports.calculateCommissions = async (userId, investAmount, investmentId) => {
     const currentUser = await User.findById(userId);
     if (!currentUser || !currentUser.referredBy) return;
 
-    // Check if this referred user already has any commission
-    const existingCommission = await Commission.findOne({ referredUserId: userId });
-    if (existingCommission) {
-      // Already paid commission for this user's first deposit, skip
+    // === ONLY PAY COMMISSION ON FIRST INVESTMENT ===
+    // Count how many active investments this user has
+    const investmentCount = await Investment.countDocuments({
+      userId: userId,
+      isActive: true
+    });
+
+    // If this is NOT the first investment (count > 1), skip commission
+    if (investmentCount > 1) {
+      console.log(`[commissionCalc] User ${currentUser.accountNumber} already has ${investmentCount} investments – skipping commission.`);
       return;
     }
 
+    // ===== FIRST INVESTMENT – pay commission =====
     let level = 1;
     let referrerId = currentUser.referredBy;
-    let referrer = await User.findById(referrerId);
+    let chainUser = currentUser;
 
-    while (referrer && level <= 3) {
+    while (referrerId && level <= 3) {
+      const referrer = await User.findById(referrerId);
+      if (!referrer) break;
+
       const percentage = COMMISSION_LEVELS[level];
       const commissionAmount = investAmount * percentage;
 
@@ -52,9 +63,8 @@ exports.calculateCommissions = async (userId, investAmount, investmentId) => {
         }).save();
       }
 
-      // Move up the chain: the referrer becomes the next user to check their referrer
-      const nextReferrerId = referrer.referredBy;
-      referrer = nextReferrerId ? await User.findById(nextReferrerId) : null;
+      chainUser = referrer;
+      referrerId = chainUser.referredBy;
       level++;
     }
   } catch (err) {
