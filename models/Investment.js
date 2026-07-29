@@ -12,8 +12,7 @@ const InvestmentSchema = new mongoose.Schema({
   daysRemaining: { type: Number, default: 0 },
   totalReceived: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
-  // NEW: tracks the last time income was added
-  lastIncomeDate: { type: Date, default: Date.now }
+  lastIncomeDate: { type: Date, default: Date.now } // <-- CRITICAL
 });
 
 module.exports = mongoose.model('Investment', InvestmentSchema);
