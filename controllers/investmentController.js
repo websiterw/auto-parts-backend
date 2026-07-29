@@ -17,7 +17,7 @@ exports.purchase = async (req, res) => {
 
     const user = await User.findById(userId);
 
-    // If user has bonus balance (registration bonus), move it to main balance
+    // Release bonus if any
     if (user.bonusBalance > 0) {
       user.balance += user.bonusBalance;
       user.bonusBalance = 0;
@@ -28,11 +28,10 @@ exports.purchase = async (req, res) => {
       return res.status(400).json({ msg: 'Insufficient balance' });
     }
 
-    // Deduct balance
     user.balance -= product.price;
     await user.save();
 
-    // Create investment – set lastIncomeDate to now
+    // Create investment with lastIncomeDate = now
     const investment = new Investment({
       userId,
       productId,
@@ -42,7 +41,7 @@ exports.purchase = async (req, res) => {
       totalIncome: product.totalIncome,
       termDays: product.termDays,
       daysRemaining: product.termDays,
-      lastIncomeDate: new Date() // <-- start countdown from purchase time
+      lastIncomeDate: new Date() // <-- starts 24-hour countdown
     });
     await investment.save();
 
@@ -54,12 +53,12 @@ exports.purchase = async (req, res) => {
       reference: investment._id
     }).save();
 
-    // Calculate commissions
+    // Calculate commissions (ONLY for the FIRST investment of the referred user)
     await calculateCommissions(userId, product.price, investment._id);
 
     res.json({ msg: 'Purchase successful', investment });
   } catch (err) {
-    console.error(err);
+    console.error('Purchase error:', err);
     res.status(500).json({ msg: err.message });
   }
 };
@@ -77,35 +76,7 @@ exports.getUserInvestments = async (req, res) => {
 };
 
 // ============================================================
-// LEGACY: process all incomes at once (midnight cron)
-// Kept for backward compatibility – not used if new endpoint is called
-// ============================================================
-exports.processDailyIncome = async () => {
-  console.log('[processDailyIncome] Running (legacy)');
-  const investments = await Investment.find({ isActive: true, daysRemaining: { $gt: 0 } });
-  let count = 0;
-  for (const inv of investments) {
-    const user = await User.findById(inv.userId);
-    if (!user) continue;
-    user.balance += inv.dailyIncome;
-    user.cumulativeIncome += inv.dailyIncome;
-    await user.save();
-    await new Transaction({
-      userId: inv.userId,
-      type: 'product_income',
-      amount: inv.dailyIncome,
-      description: `Daily income from ${inv.productName}`
-    }).save();
-    inv.daysRemaining -= 1;
-    if (inv.daysRemaining === 0) inv.isActive = false;
-    await inv.save();
-    count++;
-  }
-  console.log(`[processDailyIncome] Processed ${count} investments.`);
-};
-
-// ============================================================
-// NEW: process only due incomes (24 hours after last income)
+// PROCESS DUE INCOMES (called by cron job)
 // ============================================================
 exports.processDueIncomes = async () => {
   console.log('[processDueIncomes] Checking for due incomes...');
@@ -140,6 +111,7 @@ exports.processDueIncomes = async () => {
     // Update investment
     inv.lastIncomeDate = now;
     inv.daysRemaining -= 1;
+    inv.totalReceived += inv.dailyIncome;
     if (inv.daysRemaining === 0) inv.isActive = false;
     await inv.save();
 
