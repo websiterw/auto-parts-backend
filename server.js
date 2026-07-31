@@ -51,15 +51,14 @@ app.get('/', (req, res) => {
 });
 
 // ===========================
-// 6. NEW endpoint: process due incomes (called by external cron)
+// 6. Income cron job – runs every minute
 // ===========================
-app.get('/api/process-incomes', async (req, res) => {
+cron.schedule('* * * * *', async () => {
+  console.log('[CRON] Running income check...');
   try {
-    const count = await investmentController.processDueIncomes();
-    res.json({ msg: `Processed ${count} income payments.` });
+    await investmentController.processDueIncomes();
   } catch (err) {
-    console.error('[process-incomes] Error:', err);
-    res.status(500).json({ msg: err.message });
+    console.error('[CRON] Error:', err);
   }
 });
 
