@@ -6,7 +6,7 @@ const PendingRecharge = require('../models/PendingRecharge');
 const Product = require('../models/Product');
 const GiftCode = require('../models/GiftCode');
 const Settings = require('../models/Settings');
-const Investment = require('../models/Investment'); // <-- ADDED
+const Investment = require('../models/Investment');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -459,22 +459,46 @@ exports.updateInvestment = async (req, res) => {
     if (addIncomeNow) {
       const user = await User.findById(investment.userId);
       if (!user) return res.status(404).json({ msg: 'User not found' });
+
+      // Add income
       user.balance += investment.dailyIncome;
       user.cumulativeIncome += investment.dailyIncome;
       await user.save();
+
+      // Record transaction
       await new Transaction({
         userId: user._id,
         type: 'adjustment',
         amount: investment.dailyIncome,
         description: `Manual income added by admin for ${investment.productName}`
       }).save();
-      investment.lastIncomeDate = new Date(); // reset timer
+
+      // Update investment: decrease days, increase received, reset timer
+      investment.lastIncomeDate = new Date();
+      investment.daysRemaining -= 1;
+      investment.totalReceived = (investment.totalReceived || 0) + investment.dailyIncome;
+      if (investment.daysRemaining <= 0) {
+        investment.isActive = false;
+        investment.daysRemaining = 0;
+      }
     }
 
     await investment.save();
     res.json({ msg: 'Investment updated successfully', investment });
   } catch (err) {
     console.error('Update investment error:', err);
+    res.status(500).json({ msg: err.message });
+  }
+};
+
+// ========== DELETE INVESTMENT ==========
+exports.deleteInvestment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await Investment.findByIdAndDelete(id);
+    res.json({ msg: 'Investment deleted successfully.' });
+  } catch (err) {
+    console.error('Delete investment error:', err);
     res.status(500).json({ msg: err.message });
   }
 };
