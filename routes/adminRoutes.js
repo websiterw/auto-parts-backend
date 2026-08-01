@@ -44,7 +44,11 @@ router.post('/giftcodes', adminAuth, adminController.createGiftCode);
 router.delete('/giftcodes/all', adminAuth, adminController.deleteAllGiftCodes);
 router.delete('/giftcodes/:id', adminAuth, adminController.deleteGiftCode);
 
-// ===== SETTINGS ROUTES =====
+// ===== INVESTMENTS =====
+router.get('/investments', adminAuth, adminController.getInvestments);
+router.put('/investments/:id', adminAuth, adminController.updateInvestment);
+
+// ===== SETTINGS =====
 router.get('/settings', adminAuth, adminController.getSettings);
 router.put('/settings', adminAuth, adminController.updateSettings);
 
