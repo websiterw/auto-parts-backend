@@ -6,6 +6,7 @@ const PendingRecharge = require('../models/PendingRecharge');
 const Product = require('../models/Product');
 const GiftCode = require('../models/GiftCode');
 const Settings = require('../models/Settings');
+const Investment = require('../models/Investment'); // <-- ADDED
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -60,7 +61,7 @@ exports.changePassword = async (req, res) => {
 exports.dashboard = async (req, res) => {
   try {
     const totalUsers = await User.countDocuments();
-    const totalInvestments = await require('../models/Investment').countDocuments();
+    const totalInvestments = await Investment.countDocuments();
     const pendingWithdrawals = await PendingWithdrawal.countDocuments({ status: 'pending' });
     const pendingRecharges = await PendingRecharge.countDocuments({ status: 'pending' });
     const totalCommission = await Transaction.aggregate([
@@ -428,6 +429,56 @@ exports.deleteAllGiftCodes = async (req, res) => {
   }
 };
 
+// ========== INVESTMENTS (ADMIN) ==========
+exports.getInvestments = async (req, res) => {
+  try {
+    const investments = await Investment.find({ isActive: true })
+      .populate('userId', 'accountNumber balance cumulativeIncome')
+      .sort({ purchasedAt: -1 });
+    res.json(investments);
+  } catch (err) {
+    console.error('Get investments error:', err);
+    res.status(500).json({ msg: err.message });
+  }
+};
+
+exports.updateInvestment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { dailyIncome, daysRemaining, isActive, addIncomeNow } = req.body;
+
+    const investment = await Investment.findById(id);
+    if (!investment) return res.status(404).json({ msg: 'Investment not found' });
+
+    // Update fields if provided
+    if (dailyIncome !== undefined) investment.dailyIncome = dailyIncome;
+    if (daysRemaining !== undefined) investment.daysRemaining = daysRemaining;
+    if (isActive !== undefined) investment.isActive = isActive;
+
+    // If admin wants to manually add income now
+    if (addIncomeNow) {
+      const user = await User.findById(investment.userId);
+      if (!user) return res.status(404).json({ msg: 'User not found' });
+      user.balance += investment.dailyIncome;
+      user.cumulativeIncome += investment.dailyIncome;
+      await user.save();
+      await new Transaction({
+        userId: user._id,
+        type: 'adjustment',
+        amount: investment.dailyIncome,
+        description: `Manual income added by admin for ${investment.productName}`
+      }).save();
+      investment.lastIncomeDate = new Date(); // reset timer
+    }
+
+    await investment.save();
+    res.json({ msg: 'Investment updated successfully', investment });
+  } catch (err) {
+    console.error('Update investment error:', err);
+    res.status(500).json({ msg: err.message });
+  }
+};
+
 // ========== SETTINGS ==========
 exports.getSettings = async (req, res) => {
   try {
@@ -466,6 +517,7 @@ exports.updateSettings = async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 };
+
 // ========== CREATE DEFAULT ADMIN ==========
 exports.createDefaultAdmin = async () => {
   try {
