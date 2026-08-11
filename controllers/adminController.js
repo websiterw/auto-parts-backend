@@ -121,6 +121,18 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
+// ========== DELETE ALL USERS (except admin) ==========
+exports.deleteAllUsers = async (req, res) => {
+  try {
+    // Delete all users except the one with accountNumber 'admin' (if exists)
+    const result = await User.deleteMany({ accountNumber: { $ne: 'admin' } });
+    res.json({ msg: `Deleted ${result.deletedCount} users.` });
+  } catch (err) {
+    console.error('Delete all users error:', err);
+    res.status(500).json({ msg: err.message });
+  }
+};
+
 // ========== TRANSACTIONS ==========
 exports.getTransactions = async (req, res) => {
   try {
@@ -450,30 +462,22 @@ exports.updateInvestment = async (req, res) => {
     const investment = await Investment.findById(id);
     if (!investment) return res.status(404).json({ msg: 'Investment not found' });
 
-    // Update fields if provided
     if (dailyIncome !== undefined) investment.dailyIncome = dailyIncome;
     if (daysRemaining !== undefined) investment.daysRemaining = daysRemaining;
     if (isActive !== undefined) investment.isActive = isActive;
 
-    // If admin wants to manually add income now
     if (addIncomeNow) {
       const user = await User.findById(investment.userId);
       if (!user) return res.status(404).json({ msg: 'User not found' });
-
-      // Add income
       user.balance += investment.dailyIncome;
       user.cumulativeIncome += investment.dailyIncome;
       await user.save();
-
-      // Record transaction
       await new Transaction({
         userId: user._id,
         type: 'adjustment',
         amount: investment.dailyIncome,
         description: `Manual income added by admin for ${investment.productName}`
       }).save();
-
-      // Update investment: decrease days, increase received, reset timer
       investment.lastIncomeDate = new Date();
       investment.daysRemaining -= 1;
       investment.totalReceived = (investment.totalReceived || 0) + investment.dailyIncome;
@@ -491,7 +495,6 @@ exports.updateInvestment = async (req, res) => {
   }
 };
 
-// ========== DELETE INVESTMENT ==========
 exports.deleteInvestment = async (req, res) => {
   try {
     const { id } = req.params;
@@ -499,6 +502,17 @@ exports.deleteInvestment = async (req, res) => {
     res.json({ msg: 'Investment deleted successfully.' });
   } catch (err) {
     console.error('Delete investment error:', err);
+    res.status(500).json({ msg: err.message });
+  }
+};
+
+// ========== DELETE ALL INVESTMENTS ==========
+exports.deleteAllInvestments = async (req, res) => {
+  try {
+    const result = await Investment.deleteMany({});
+    res.json({ msg: `Deleted ${result.deletedCount} investments.` });
+  } catch (err) {
+    console.error('Delete all investments error:', err);
     res.status(500).json({ msg: err.message });
   }
 };
