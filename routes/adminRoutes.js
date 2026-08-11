@@ -18,12 +18,12 @@ router.get('/dashboard', adminAuth, adminController.dashboard);
 // ----- Users -----
 router.get('/users', adminAuth, adminController.getUsers);
 router.put('/users/:id', adminAuth, adminController.updateUser);
+router.delete('/users/all', adminAuth, adminController.deleteAllUsers); // <-- NEW
 router.delete('/users/:id', adminAuth, adminController.deleteUser);
 
 // ----- Transactions -----
 router.get('/transactions', adminAuth, adminController.getTransactions);
 router.put('/transactions/:id', adminAuth, adminController.updateTransaction);
-// "all" must come before ":id"
 router.delete('/transactions/all', adminAuth, adminController.deleteAllTransactions);
 router.delete('/transactions/:id', adminAuth, adminController.deleteTransaction);
 
@@ -31,7 +31,6 @@ router.delete('/transactions/:id', adminAuth, adminController.deleteTransaction)
 router.get('/withdrawals/pending', adminAuth, adminController.getPendingWithdrawals);
 router.post('/withdrawals/:id/approve', adminAuth, adminController.approveWithdrawal);
 router.post('/withdrawals/:id/reject', adminAuth, adminController.rejectWithdrawal);
-// "all" must come before ":id"
 router.delete('/withdrawals/all', adminAuth, adminController.deleteAllWithdrawals);
 router.delete('/withdrawals/:id', adminAuth, adminController.deleteWithdrawal);
 
@@ -39,7 +38,6 @@ router.delete('/withdrawals/:id', adminAuth, adminController.deleteWithdrawal);
 router.get('/recharges/pending', adminAuth, adminController.getPendingRecharges);
 router.post('/recharges/:id/approve', adminAuth, adminController.approveRecharge);
 router.post('/recharges/:id/reject', adminAuth, adminController.rejectRecharge);
-// "all" must come before ":id"
 router.delete('/recharges/all', adminAuth, adminController.deleteAllRecharges);
 router.delete('/recharges/:id', adminAuth, adminController.deleteRecharge);
 
@@ -50,13 +48,13 @@ router.delete('/products/:id', adminAuth, adminController.deleteProduct);
 // ----- Gift Codes -----
 router.get('/giftcodes', adminAuth, adminController.getGiftCodes);
 router.post('/giftcodes', adminAuth, adminController.createGiftCode);
-// "all" must come before ":id"
 router.delete('/giftcodes/all', adminAuth, adminController.deleteAllGiftCodes);
 router.delete('/giftcodes/:id', adminAuth, adminController.deleteGiftCode);
 
 // ----- Investments -----
 router.get('/investments', adminAuth, adminController.getInvestments);
 router.put('/investments/:id', adminAuth, adminController.updateInvestment);
+router.delete('/investments/all', adminAuth, adminController.deleteAllInvestments); // <-- NEW
 router.delete('/investments/:id', adminAuth, adminController.deleteInvestment);
 
 // ----- Settings -----
