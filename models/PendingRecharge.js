@@ -5,6 +5,7 @@ const PendingRechargeSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   method: { type: String, required: true },
   account: { type: String, default: '' },
+  holderName: { type: String, default: '' }, // <-- NEW
   status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
   createdAt: { type: Date, default: Date.now },
   processedAt: Date
