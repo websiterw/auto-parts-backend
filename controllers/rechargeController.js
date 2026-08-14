@@ -2,7 +2,7 @@ const PendingRecharge = require('../models/PendingRecharge');
 
 exports.requestRecharge = async (req, res) => {
   try {
-    const { amount, method, account, holderName } = req.body; // <-- added holderName
+    const { amount, method, userMethod, account, holderName } = req.body;
     const userId = req.user.id;
 
     if (!amount || amount < 6000) {
@@ -13,8 +13,9 @@ exports.requestRecharge = async (req, res) => {
       userId,
       amount,
       method,
+      userMethod,
       account: account || '',
-      holderName: holderName || '', // <-- save holder name
+      holderName: holderName || '',
       status: 'pending'
     });
     await pending.save();
